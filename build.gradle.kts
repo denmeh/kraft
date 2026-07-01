@@ -28,6 +28,7 @@ dependencies {
     implementation("org.ow2.asm:asm:9.7.1")
     implementation("org.ow2.asm:asm-commons:9.7.1")
 
+    compileOnly("org.jetbrains:annotations:26.0.2")
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))

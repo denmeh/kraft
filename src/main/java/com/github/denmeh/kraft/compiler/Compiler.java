@@ -7,6 +7,7 @@ import com.github.denmeh.kraft.compiler.lexer.Lexer;
 import com.github.denmeh.kraft.compiler.lexer.Token;
 import com.github.denmeh.kraft.compiler.parser.Parser;
 import com.github.denmeh.kraft.compiler.semantics.SemanticAnalyzer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -35,7 +36,11 @@ public final class Compiler {
         return CompileResult.success(ast, reporter.diagnostics());
     }
 
-    public record CompileResult(KraftFile ast, List<Diagnostic> diagnostics, boolean success) {
+    public record CompileResult(
+            @Nullable KraftFile ast,
+            List<Diagnostic> diagnostics,
+            boolean success
+    ) {
         public static CompileResult success(KraftFile ast, List<Diagnostic> diagnostics) {
             return new CompileResult(ast, diagnostics, true);
         }
