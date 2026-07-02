@@ -48,6 +48,18 @@ public final class KraftExamples {
                         send "yes" to player
             """;
 
+    public static final String IF_SKRIPT_COMPARISONS = """
+            command /rank:
+                trigger:
+                    set {_score} to 15
+                    if {_score} is greater than 10:
+                        send "high" to player
+                    if {_score} is not 0:
+                        send "playing" to player
+                    if {_score} is less than or equal to 20:
+                        send "ok" to player
+            """;
+
     private KraftExamples() {
     }
 }

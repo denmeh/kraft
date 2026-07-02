@@ -1,0 +1,5 @@
+command /check:
+    trigger:
+        set {_x} to 24
+        if {_x} is 24:
+            send "match!" to player

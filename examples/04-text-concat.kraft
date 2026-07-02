@@ -1,0 +1,3 @@
+command /greet:
+    trigger:
+        send "Result: " + 10 to player

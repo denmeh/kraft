@@ -1,0 +1,4 @@
+command /math:
+    trigger:
+        set {_answer} to 5 + 5
+        send {_answer} to player

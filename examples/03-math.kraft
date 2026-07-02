@@ -1,0 +1,3 @@
+command /math:
+    trigger:
+        send 5 + 5 to player

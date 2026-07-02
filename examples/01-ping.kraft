@@ -1,0 +1,3 @@
+command /ping:
+    trigger:
+        send "Pong!" to player

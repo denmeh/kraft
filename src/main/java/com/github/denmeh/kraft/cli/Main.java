@@ -1,6 +1,7 @@
 package com.github.denmeh.kraft.cli;
 
 import com.github.denmeh.kraft.compiler.Compiler;
+import com.github.denmeh.kraft.compiler.ast.AstPrinter;
 import com.github.denmeh.kraft.compiler.diagnostic.Diagnostic;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public final class Main {
             }
 
             System.out.println("Parsed " + result.ast().commands().size() + " command(s)");
+            System.out.println(new AstPrinter().print(result.ast()).stripTrailing());
         } catch (IOException e) {
             System.err.println("Failed to read " + sourcePath + ": " + e.getMessage());
             System.exit(1);

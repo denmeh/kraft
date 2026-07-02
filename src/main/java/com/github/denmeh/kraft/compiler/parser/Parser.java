@@ -150,6 +150,7 @@ public final class Parser {
         List<Statement> body = new ArrayList<>();
         if (match(TokenType.INDENT)) {
             body = parseBlockStatements();
+            match(TokenType.DEDENT);
         }
 
         return new IfStatement(span(ifToken), condition, body);

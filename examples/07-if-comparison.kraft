@@ -1,0 +1,4 @@
+command /compare:
+    trigger:
+        if 2 < 3:
+            send "yes" to player

@@ -177,4 +177,14 @@ class ParserTest {
         ComparisonExpression condition = assertInstanceOf(ComparisonExpression.class, ifStatement.condition());
         assertEquals(ComparisonOperator.LESS_THAN, condition.operator());
     }
+
+    @Test
+    void parsesMultipleIfStatementsInTrigger() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.IF_SKRIPT_COMPARISONS, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+        assertEquals(4, file.commands().getFirst().trigger().orElseThrow().statements().size());
+    }
 }
