@@ -44,6 +44,20 @@ class AstPrinterTest {
         );
     }
 
+    @Test
+    void printsMathExample() {
+        KraftFile file = parse(KraftExamples.MATH);
+
+        assertEquals(
+                """
+                Command(/math)
+                  Trigger
+                    Send((5 + 5), player)
+                """.stripTrailing(),
+                printer.print(file).stripTrailing()
+        );
+    }
+
     private static KraftFile parse(String source) {
         DiagnosticReporter reporter = new DiagnosticReporter();
         List<Token> tokens = new Lexer(source, reporter).tokenize();

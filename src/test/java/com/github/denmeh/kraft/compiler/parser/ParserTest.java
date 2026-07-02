@@ -1,9 +1,13 @@
 package com.github.denmeh.kraft.compiler.parser;
 
 import com.github.denmeh.kraft.compiler.KraftExamples;
+import com.github.denmeh.kraft.compiler.ast.BinaryExpression;
+import com.github.denmeh.kraft.compiler.ast.BinaryOperator;
 import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
+import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
+import com.github.denmeh.kraft.compiler.ast.TextLiteralExpression;
 import com.github.denmeh.kraft.compiler.diagnostic.DiagnosticReporter;
 import com.github.denmeh.kraft.compiler.lexer.Lexer;
 import com.github.denmeh.kraft.compiler.lexer.Token;
@@ -36,7 +40,8 @@ class ParserTest {
                 SendStatement.class,
                 command.trigger().orElseThrow().statements().getFirst()
         );
-        assertEquals("Pong!", send.message());
+        TextLiteralExpression message = assertInstanceOf(TextLiteralExpression.class, send.message());
+        assertEquals("Pong!", message.value());
     }
 
     @Test
@@ -47,5 +52,69 @@ class ParserTest {
 
         assertFalse(reporter.hasErrors());
         assertEquals(Optional.of("kraft.ping"), file.commands().getFirst().permission());
+    }
+
+    @Test
+    void parsesMathExpressionInSend() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.MATH, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        SendStatement send = assertInstanceOf(
+                SendStatement.class,
+                file.commands().getFirst().trigger().orElseThrow().statements().getFirst()
+        );
+        BinaryExpression expression = assertInstanceOf(BinaryExpression.class, send.message());
+        assertEquals(BinaryOperator.PLUS, expression.operator());
+
+        NumberLiteralExpression left = assertInstanceOf(NumberLiteralExpression.class, expression.left());
+        NumberLiteralExpression right = assertInstanceOf(NumberLiteralExpression.class, expression.right());
+        assertEquals("5", left.value());
+        assertEquals("5", right.value());
+    }
+
+    @Test
+    void parsesTextConcatenationInSend() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.TEXT_CONCAT, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        SendStatement send = assertInstanceOf(
+                SendStatement.class,
+                file.commands().getFirst().trigger().orElseThrow().statements().getFirst()
+        );
+        BinaryExpression expression = assertInstanceOf(BinaryExpression.class, send.message());
+        assertEquals(BinaryOperator.PLUS, expression.operator());
+        assertInstanceOf(TextLiteralExpression.class, expression.left());
+        assertInstanceOf(NumberLiteralExpression.class, expression.right());
+    }
+
+    @Test
+    void respectsOperatorPrecedence() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        String source = """
+                command /calc:
+                    trigger:
+                        send 2 + 3 * 4 to player
+                """;
+        List<Token> tokens = new Lexer(source, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        SendStatement send = assertInstanceOf(
+                SendStatement.class,
+                file.commands().getFirst().trigger().orElseThrow().statements().getFirst()
+        );
+        BinaryExpression addition = assertInstanceOf(BinaryExpression.class, send.message());
+        assertEquals(BinaryOperator.PLUS, addition.operator());
+        assertInstanceOf(NumberLiteralExpression.class, addition.left());
+
+        BinaryExpression multiplication = assertInstanceOf(BinaryExpression.class, addition.right());
+        assertEquals(BinaryOperator.MULTIPLY, multiplication.operator());
     }
 }

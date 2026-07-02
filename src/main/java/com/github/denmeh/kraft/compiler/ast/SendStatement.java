@@ -1,4 +1,4 @@
 package com.github.denmeh.kraft.compiler.ast;
 
-public record SendStatement(SourceSpan span, String message) implements Statement {
+public record SendStatement(SourceSpan span, Expression message) implements Statement {
 }

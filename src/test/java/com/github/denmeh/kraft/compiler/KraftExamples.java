@@ -14,6 +14,18 @@ public final class KraftExamples {
                     send "Pong!" to player
             """;
 
+    public static final String MATH = """
+            command /math:
+                trigger:
+                    send 5 + 5 to player
+            """;
+
+    public static final String TEXT_CONCAT = """
+            command /greet:
+                trigger:
+                    send "Result: " + 10 to player
+            """;
+
     private KraftExamples() {
     }
 }

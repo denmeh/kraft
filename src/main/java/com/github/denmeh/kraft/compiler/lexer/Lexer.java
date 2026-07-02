@@ -111,15 +111,20 @@ public final class Lexer {
                 column = 1;
             }
             case '"' -> tokens.add(readString());
+            case '+' -> tokens.add(token(TokenType.PLUS, "+", line, column - 1));
+            case '-' -> tokens.add(token(TokenType.MINUS, "-", line, column - 1));
+            case '*' -> tokens.add(token(TokenType.STAR, "*", line, column - 1));
             case '/' -> {
                 if (isAlpha(peek())) {
                     tokens.add(readCommandName());
                 } else {
-                    reporter.error("Unexpected character '/'", line, column - 1);
+                    tokens.add(token(TokenType.SLASH, "/", line, column - 1));
                 }
             }
             default -> {
-                if (isAlpha(c)) {
+                if (isDigit(c)) {
+                    tokens.add(readNumber(c));
+                } else if (isAlpha(c)) {
                     tokens.add(readIdentifierOrKeyword());
                 } else if (!isWhitespace(c)) {
                     reporter.error("Unexpected character '" + c + "'", line, column - 1);
@@ -160,6 +165,19 @@ public final class Lexer {
         }
 
         return token(TokenType.COMMAND_NAME, name.toString(), startLine, startColumn);
+    }
+
+    private Token readNumber(char first) {
+        int startLine = line;
+        int startColumn = column - 1;
+        StringBuilder text = new StringBuilder();
+        text.append(first);
+
+        while (isDigit(peek())) {
+            text.append(advance());
+        }
+
+        return token(TokenType.NUMBER, text.toString(), startLine, startColumn);
     }
 
     private Token readIdentifierOrKeyword() {
@@ -257,7 +275,11 @@ public final class Lexer {
     }
 
     private static boolean isAlphaNumeric(char c) {
-        return isAlpha(c) || (c >= '0' && c <= '9');
+        return isAlpha(c) || isDigit(c);
+    }
+
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private static boolean isIdentifierPart(char c) {

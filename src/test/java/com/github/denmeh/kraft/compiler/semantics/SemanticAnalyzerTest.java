@@ -29,6 +29,30 @@ class SemanticAnalyzerTest {
     }
 
     @Test
+    void acceptsMathExpressionInSend() {
+        DiagnosticReporter reporter = analyze(KraftExamples.MATH);
+        assertFalse(reporter.hasErrors());
+    }
+
+    @Test
+    void acceptsTextConcatenationInSend() {
+        DiagnosticReporter reporter = analyze(KraftExamples.TEXT_CONCAT);
+        assertFalse(reporter.hasErrors());
+    }
+
+    @Test
+    void reportsInvalidArithmeticOperands() {
+        DiagnosticReporter reporter = analyze("""
+                command /bad:
+                    trigger:
+                        send "hello" - "world" to player
+                """);
+
+        assertTrue(reporter.hasErrors());
+        assertTrue(hasMessage(reporter, "Subtraction requires numbers"));
+    }
+
+    @Test
     void reportsDuplicateCommands() {
         DiagnosticReporter reporter = analyze("""
                 command /ping:

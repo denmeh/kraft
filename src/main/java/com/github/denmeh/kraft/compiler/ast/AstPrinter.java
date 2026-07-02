@@ -40,11 +40,29 @@ public final class AstPrinter {
 
     private void printStatement(StringBuilder output, Statement statement, int depth) {
         if (statement instanceof SendStatement send) {
-            appendLine(output, depth, "Send(\"" + send.message() + "\", player)");
+            appendLine(output, depth, "Send(" + printExpression(send.message()) + ", player)");
             return;
         }
 
         throw new IllegalArgumentException("Unsupported statement: " + statement.getClass().getSimpleName());
+    }
+
+    private String printExpression(Expression expression) {
+        return switch (expression) {
+            case NumberLiteralExpression number -> number.value();
+            case TextLiteralExpression text -> "\"" + text.value() + "\"";
+            case BinaryExpression binary -> printBinary(binary);
+        };
+    }
+
+    private String printBinary(BinaryExpression binary) {
+        String operator = switch (binary.operator()) {
+            case PLUS -> "+";
+            case MINUS -> "-";
+            case MULTIPLY -> "*";
+            case DIVIDE -> "/";
+        };
+        return "(" + printExpression(binary.left()) + " " + operator + " " + printExpression(binary.right()) + ")";
     }
 
     private static void appendLine(StringBuilder output, int depth, String line) {

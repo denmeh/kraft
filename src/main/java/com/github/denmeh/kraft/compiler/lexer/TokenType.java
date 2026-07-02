@@ -11,6 +11,12 @@ public enum TokenType {
     COMMAND_NAME,
     IDENTIFIER,
     STRING,
+    NUMBER,
+
+    PLUS,
+    MINUS,
+    STAR,
+    SLASH,
 
     COLON,
     NEWLINE,

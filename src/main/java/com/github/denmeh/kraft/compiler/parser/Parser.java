@@ -1,10 +1,15 @@
 package com.github.denmeh.kraft.compiler.parser;
 
+import com.github.denmeh.kraft.compiler.ast.BinaryExpression;
+import com.github.denmeh.kraft.compiler.ast.BinaryOperator;
 import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
+import com.github.denmeh.kraft.compiler.ast.Expression;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
+import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
 import com.github.denmeh.kraft.compiler.ast.SourceSpan;
 import com.github.denmeh.kraft.compiler.ast.Statement;
+import com.github.denmeh.kraft.compiler.ast.TextLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.TriggerBlock;
 import com.github.denmeh.kraft.compiler.diagnostic.DiagnosticReporter;
 import com.github.denmeh.kraft.compiler.lexer.Token;
@@ -106,7 +111,7 @@ public final class Parser {
 
     private Statement parseStatement() {
         Token sendToken = consume(TokenType.SEND, "Expected 'send'");
-        Token messageToken = consume(TokenType.STRING, "Expected string message after 'send'");
+        Expression message = parseExpression();
         consume(TokenType.TO, "Expected 'to' after message");
         consume(TokenType.PLAYER, "Expected 'player' after 'to'");
 
@@ -114,7 +119,55 @@ public final class Parser {
             advance();
         }
 
-        return new SendStatement(span(sendToken), messageToken.lexeme());
+        return new SendStatement(span(sendToken), message);
+    }
+
+    private Expression parseExpression() {
+        return parseAddition();
+    }
+
+    private Expression parseAddition() {
+        Expression left = parseMultiplication();
+
+        while (match(TokenType.PLUS) || match(TokenType.MINUS)) {
+            BinaryOperator operator = previous().type() == TokenType.PLUS
+                    ? BinaryOperator.PLUS
+                    : BinaryOperator.MINUS;
+            Expression right = parseMultiplication();
+            left = new BinaryExpression(span(previous()), operator, left, right);
+        }
+
+        return left;
+    }
+
+    private Expression parseMultiplication() {
+        Expression left = parsePrimary();
+
+        while (match(TokenType.STAR) || match(TokenType.SLASH)) {
+            BinaryOperator operator = previous().type() == TokenType.STAR
+                    ? BinaryOperator.MULTIPLY
+                    : BinaryOperator.DIVIDE;
+            Expression right = parsePrimary();
+            left = new BinaryExpression(span(previous()), operator, left, right);
+        }
+
+        return left;
+    }
+
+    private Expression parsePrimary() {
+        if (match(TokenType.NUMBER)) {
+            Token token = previous();
+            return new NumberLiteralExpression(span(token), token.lexeme());
+        }
+
+        if (match(TokenType.STRING)) {
+            Token token = previous();
+            return new TextLiteralExpression(span(token), token.lexeme());
+        }
+
+        Token token = peek();
+        reporter.error("Expected expression", token.line(), token.column());
+        return new NumberLiteralExpression(span(token), "0");
     }
 
     private void closeBlock() {

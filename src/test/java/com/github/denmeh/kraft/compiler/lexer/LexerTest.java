@@ -76,4 +76,38 @@ class LexerTest {
         );
         assertEquals("kraft.ping", tokens.get(7).lexeme());
     }
+
+    @Test
+    void tokenizesMathExpression() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.MATH, reporter).tokenize();
+
+        assertFalse(reporter.hasErrors());
+        assertEquals(
+                List.of(
+                        TokenType.COMMAND,
+                        TokenType.COMMAND_NAME,
+                        TokenType.COLON,
+                        TokenType.NEWLINE,
+                        TokenType.INDENT,
+                        TokenType.TRIGGER,
+                        TokenType.COLON,
+                        TokenType.NEWLINE,
+                        TokenType.INDENT,
+                        TokenType.SEND,
+                        TokenType.NUMBER,
+                        TokenType.PLUS,
+                        TokenType.NUMBER,
+                        TokenType.TO,
+                        TokenType.PLAYER,
+                        TokenType.NEWLINE,
+                        TokenType.DEDENT,
+                        TokenType.DEDENT,
+                        TokenType.EOF
+                ),
+                tokens.stream().map(Token::type).toList()
+        );
+        assertEquals("5", tokens.get(10).lexeme());
+        assertEquals("5", tokens.get(12).lexeme());
+    }
 }
