@@ -4,6 +4,9 @@ import com.github.denmeh.kraft.compiler.KraftExamples;
 import com.github.denmeh.kraft.compiler.ast.BinaryExpression;
 import com.github.denmeh.kraft.compiler.ast.BinaryOperator;
 import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
+import com.github.denmeh.kraft.compiler.ast.ComparisonExpression;
+import com.github.denmeh.kraft.compiler.ast.ComparisonOperator;
+import com.github.denmeh.kraft.compiler.ast.IfStatement;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
@@ -138,5 +141,40 @@ class ParserTest {
         SendStatement send = assertInstanceOf(SendStatement.class, statements.get(1));
         VariableReferenceExpression variable = assertInstanceOf(VariableReferenceExpression.class, send.message());
         assertEquals("_answer", variable.name());
+    }
+
+    @Test
+    void parsesIfWithSkriptStyleEquality() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.IF_EQUALITY, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        var statements = file.commands().getFirst().trigger().orElseThrow().statements();
+        assertEquals(2, statements.size());
+
+        IfStatement ifStatement = assertInstanceOf(IfStatement.class, statements.get(1));
+        ComparisonExpression condition = assertInstanceOf(ComparisonExpression.class, ifStatement.condition());
+        assertEquals(ComparisonOperator.EQUAL, condition.operator());
+        assertInstanceOf(VariableReferenceExpression.class, condition.left());
+        assertInstanceOf(NumberLiteralExpression.class, condition.right());
+        assertEquals(1, ifStatement.body().size());
+    }
+
+    @Test
+    void parsesIfWithSymbolComparison() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.IF_COMPARISON, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        IfStatement ifStatement = assertInstanceOf(
+                IfStatement.class,
+                file.commands().getFirst().trigger().orElseThrow().statements().getFirst()
+        );
+        ComparisonExpression condition = assertInstanceOf(ComparisonExpression.class, ifStatement.condition());
+        assertEquals(ComparisonOperator.LESS_THAN, condition.operator());
     }
 }

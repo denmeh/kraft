@@ -73,6 +73,22 @@ class AstPrinterTest {
         );
     }
 
+    @Test
+    void printsIfEqualityExample() {
+        KraftFile file = parse(KraftExamples.IF_EQUALITY);
+
+        assertEquals(
+                """
+                Command(/check)
+                  Trigger
+                    Set({_x}, 24)
+                    If(({_x} is 24))
+                      Send("match!", player)
+                """.stripTrailing(),
+                printer.print(file).stripTrailing()
+        );
+    }
+
     private static KraftFile parse(String source) {
         DiagnosticReporter reporter = new DiagnosticReporter();
         List<Token> tokens = new Lexer(source, reporter).tokenize();

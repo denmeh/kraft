@@ -11,14 +11,22 @@ import java.util.Map;
 public final class Lexer {
     private static final int INDENT_WIDTH = 4;
 
-    private static final Map<String, TokenType> KEYWORDS = Map.of(
-            "command", TokenType.COMMAND,
-            "permission", TokenType.PERMISSION,
-            "trigger", TokenType.TRIGGER,
-            "send", TokenType.SEND,
-            "set", TokenType.SET,
-            "to", TokenType.TO,
-            "player", TokenType.PLAYER
+    private static final Map<String, TokenType> KEYWORDS = Map.ofEntries(
+            Map.entry("command", TokenType.COMMAND),
+            Map.entry("permission", TokenType.PERMISSION),
+            Map.entry("trigger", TokenType.TRIGGER),
+            Map.entry("send", TokenType.SEND),
+            Map.entry("set", TokenType.SET),
+            Map.entry("if", TokenType.IF),
+            Map.entry("is", TokenType.IS),
+            Map.entry("not", TokenType.NOT),
+            Map.entry("greater", TokenType.GREATER),
+            Map.entry("less", TokenType.LESS),
+            Map.entry("than", TokenType.THAN),
+            Map.entry("or", TokenType.OR),
+            Map.entry("equal", TokenType.EQUAL),
+            Map.entry("to", TokenType.TO),
+            Map.entry("player", TokenType.PLAYER)
     );
 
     private final String source;
@@ -116,6 +124,20 @@ public final class Lexer {
             case '+' -> tokens.add(token(TokenType.PLUS, "+", line, column - 1));
             case '-' -> tokens.add(token(TokenType.MINUS, "-", line, column - 1));
             case '*' -> tokens.add(token(TokenType.STAR, "*", line, column - 1));
+            case '<' -> {
+                if (matchChar('=')) {
+                    tokens.add(token(TokenType.LESS_THAN_OR_EQUAL, "<=", line, column - 1));
+                } else {
+                    tokens.add(token(TokenType.LESS_THAN, "<", line, column - 1));
+                }
+            }
+            case '>' -> {
+                if (matchChar('=')) {
+                    tokens.add(token(TokenType.GREATER_THAN_OR_EQUAL, ">=", line, column - 1));
+                } else {
+                    tokens.add(token(TokenType.GREATER_THAN, ">", line, column - 1));
+                }
+            }
             case '/' -> {
                 if (isAlpha(peek())) {
                     tokens.add(readCommandName());

@@ -124,4 +124,16 @@ class LexerTest {
         assertEquals(TokenType.VARIABLE, tokens.get(17).type());
         assertEquals("_answer", tokens.get(17).lexeme());
     }
+
+    @Test
+    void tokenizesIfCondition() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.IF_COMPARISON, reporter).tokenize();
+
+        assertFalse(reporter.hasErrors());
+        assertEquals(TokenType.IF, tokens.get(9).type());
+        assertEquals(TokenType.NUMBER, tokens.get(10).type());
+        assertEquals(TokenType.LESS_THAN, tokens.get(11).type());
+        assertEquals(TokenType.NUMBER, tokens.get(12).type());
+    }
 }

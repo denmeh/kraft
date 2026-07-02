@@ -47,6 +47,43 @@ class SemanticAnalyzerTest {
     }
 
     @Test
+    void acceptsIfWithEquality() {
+        DiagnosticReporter reporter = analyze(KraftExamples.IF_EQUALITY);
+        assertFalse(reporter.hasErrors());
+    }
+
+    @Test
+    void acceptsIfWithSymbolComparison() {
+        DiagnosticReporter reporter = analyze(KraftExamples.IF_COMPARISON);
+        assertFalse(reporter.hasErrors());
+    }
+
+    @Test
+    void reportsOrderingComparisonWithNonNumbers() {
+        DiagnosticReporter reporter = analyze("""
+                command /bad:
+                    trigger:
+                        if "a" < "b":
+                            send "nope" to player
+                """);
+
+        assertTrue(reporter.hasErrors());
+        assertTrue(hasMessage(reporter, "Ordering comparisons require numbers"));
+    }
+
+    @Test
+    void reportsEmptyIfBlock() {
+        DiagnosticReporter reporter = analyze("""
+                command /bad:
+                    trigger:
+                        if 2 < 3:
+                """);
+
+        assertTrue(reporter.hasErrors());
+        assertTrue(hasMessage(reporter, "If block must contain at least one statement"));
+    }
+
+    @Test
     void reportsUndefinedVariable() {
         DiagnosticReporter reporter = analyze("""
                 command /bad:

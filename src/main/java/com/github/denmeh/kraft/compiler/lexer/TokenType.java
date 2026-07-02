@@ -6,6 +6,14 @@ public enum TokenType {
     TRIGGER,
     SEND,
     SET,
+    IF,
+    IS,
+    NOT,
+    GREATER,
+    LESS,
+    THAN,
+    OR,
+    EQUAL,
     TO,
     PLAYER,
 
@@ -19,6 +27,11 @@ public enum TokenType {
     MINUS,
     STAR,
     SLASH,
+
+    LESS_THAN,
+    GREATER_THAN,
+    LESS_THAN_OR_EQUAL,
+    GREATER_THAN_OR_EQUAL,
 
     COLON,
     NEWLINE,

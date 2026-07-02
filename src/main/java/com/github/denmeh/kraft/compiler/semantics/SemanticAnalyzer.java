@@ -3,7 +3,10 @@ package com.github.denmeh.kraft.compiler.semantics;
 import com.github.denmeh.kraft.compiler.ast.BinaryExpression;
 import com.github.denmeh.kraft.compiler.ast.BinaryOperator;
 import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
+import com.github.denmeh.kraft.compiler.ast.ComparisonExpression;
+import com.github.denmeh.kraft.compiler.ast.ComparisonOperator;
 import com.github.denmeh.kraft.compiler.ast.Expression;
+import com.github.denmeh.kraft.compiler.ast.IfStatement;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
@@ -79,6 +82,35 @@ public final class SemanticAnalyzer {
         switch (statement) {
             case SendStatement send -> validateSend(send, scope, reporter);
             case SetStatement set -> validateSet(set, scope, reporter);
+            case IfStatement ifStatement -> validateIf(ifStatement, scope, reporter);
+        }
+    }
+
+    private void validateIf(
+            IfStatement ifStatement,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        Optional<KraftType> conditionType = analyzeExpression(ifStatement.condition(), scope, reporter);
+        if (conditionType.isPresent() && conditionType.get() != KraftType.BOOLEAN) {
+            reporter.error(
+                    "If condition must be a boolean expression",
+                    ifStatement.condition().span().line(),
+                    ifStatement.condition().span().column()
+            );
+        }
+
+        if (ifStatement.body().isEmpty()) {
+            reporter.error(
+                    "If block must contain at least one statement",
+                    ifStatement.span().line(),
+                    ifStatement.span().column()
+            );
+            return;
+        }
+
+        for (Statement statement : ifStatement.body()) {
+            validateStatement(statement, scope, reporter);
         }
     }
 
@@ -121,7 +153,63 @@ public final class SemanticAnalyzer {
             case TextLiteralExpression ignored -> Optional.of(KraftType.TEXT);
             case VariableReferenceExpression variable -> analyzeVariableReference(variable, scope, reporter);
             case BinaryExpression binary -> analyzeBinary(binary, scope, reporter);
+            case ComparisonExpression comparison -> analyzeComparison(comparison, scope, reporter);
         };
+    }
+
+    private Optional<KraftType> analyzeComparison(
+            ComparisonExpression comparison,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        Optional<KraftType> leftType = analyzeExpression(comparison.left(), scope, reporter);
+        Optional<KraftType> rightType = analyzeExpression(comparison.right(), scope, reporter);
+
+        if (leftType.isEmpty() || rightType.isEmpty()) {
+            return Optional.empty();
+        }
+
+        KraftType left = leftType.get();
+        KraftType right = rightType.get();
+
+        return switch (comparison.operator()) {
+            case EQUAL, NOT_EQUAL -> {
+                if (isEqualityCompatible(left, right)) {
+                    yield Optional.of(KraftType.BOOLEAN);
+                }
+                yield invalidComparison(
+                        comparison,
+                        reporter,
+                        "Equality comparisons require matching number or text types"
+                );
+            }
+            case LESS_THAN, GREATER_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL -> {
+                if (left == KraftType.NUMBER && right == KraftType.NUMBER) {
+                    yield Optional.of(KraftType.BOOLEAN);
+                }
+                yield invalidComparison(
+                        comparison,
+                        reporter,
+                        "Ordering comparisons require numbers"
+                );
+            }
+        };
+    }
+
+    private static boolean isEqualityCompatible(KraftType left, KraftType right) {
+        if (left == KraftType.BOOLEAN || right == KraftType.BOOLEAN) {
+            return false;
+        }
+        return left == right;
+    }
+
+    private Optional<KraftType> invalidComparison(
+            ComparisonExpression comparison,
+            DiagnosticReporter reporter,
+            String message
+    ) {
+        reporter.error(message, comparison.span().line(), comparison.span().column());
+        return Optional.empty();
     }
 
     private Optional<KraftType> analyzeVariableReference(

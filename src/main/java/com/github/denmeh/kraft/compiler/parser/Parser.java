@@ -3,7 +3,10 @@ package com.github.denmeh.kraft.compiler.parser;
 import com.github.denmeh.kraft.compiler.ast.BinaryExpression;
 import com.github.denmeh.kraft.compiler.ast.BinaryOperator;
 import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
+import com.github.denmeh.kraft.compiler.ast.ComparisonExpression;
+import com.github.denmeh.kraft.compiler.ast.ComparisonOperator;
 import com.github.denmeh.kraft.compiler.ast.Expression;
+import com.github.denmeh.kraft.compiler.ast.IfStatement;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
@@ -66,7 +69,7 @@ public final class Parser {
                 permission = Optional.of(parsePermission());
             } else if (check(TokenType.TRIGGER)) {
                 trigger = Optional.of(parseTriggerBlock());
-            } else if (check(TokenType.SEND) || check(TokenType.SET)) {
+            } else if (isStatementStart()) {
                 misplacedStatements.add(parseStatement());
             } else {
                 Token token = peek();
@@ -103,12 +106,22 @@ public final class Parser {
         List<Statement> statements = new ArrayList<>();
 
         if (match(TokenType.INDENT)) {
-            while (check(TokenType.SEND) || check(TokenType.SET)) {
-                statements.add(parseStatement());
-            }
+            statements.addAll(parseBlockStatements());
         }
 
         return new TriggerBlock(span, List.copyOf(statements));
+    }
+
+    private List<Statement> parseBlockStatements() {
+        List<Statement> statements = new ArrayList<>();
+        while (isStatementStart()) {
+            statements.add(parseStatement());
+        }
+        return statements;
+    }
+
+    private boolean isStatementStart() {
+        return check(TokenType.SEND) || check(TokenType.SET) || check(TokenType.IF);
     }
 
     private Statement parseStatement() {
@@ -118,11 +131,127 @@ public final class Parser {
         if (check(TokenType.SET)) {
             return parseSetStatement();
         }
+        if (check(TokenType.IF)) {
+            return parseIfStatement();
+        }
 
         Token token = peek();
         reporter.error("Expected statement", token.line(), token.column());
         advance();
         return new SendStatement(span(token), new NumberLiteralExpression(span(token), "0"));
+    }
+
+    private IfStatement parseIfStatement() {
+        Token ifToken = consume(TokenType.IF, "Expected 'if'");
+        Expression condition = parseCondition();
+        consume(TokenType.COLON, "Expected ':' after if condition");
+        consume(TokenType.NEWLINE, "Expected newline after if condition");
+
+        List<Statement> body = new ArrayList<>();
+        if (match(TokenType.INDENT)) {
+            body = parseBlockStatements();
+        }
+
+        return new IfStatement(span(ifToken), condition, body);
+    }
+
+    private Expression parseCondition() {
+        Expression left = parseExpression();
+
+        if (match(TokenType.LESS_THAN)) {
+            return new ComparisonExpression(
+                    span(previous()),
+                    ComparisonOperator.LESS_THAN,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.GREATER_THAN)) {
+            return new ComparisonExpression(
+                    span(previous()),
+                    ComparisonOperator.GREATER_THAN,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.LESS_THAN_OR_EQUAL)) {
+            return new ComparisonExpression(
+                    span(previous()),
+                    ComparisonOperator.LESS_THAN_OR_EQUAL,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.GREATER_THAN_OR_EQUAL)) {
+            return new ComparisonExpression(
+                    span(previous()),
+                    ComparisonOperator.GREATER_THAN_OR_EQUAL,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.IS)) {
+            return parseIsComparison(left, previous());
+        }
+
+        Token token = peek();
+        reporter.error("Expected comparison operator", token.line(), token.column());
+        return left;
+    }
+
+    private ComparisonExpression parseIsComparison(Expression left, Token isToken) {
+        if (match(TokenType.NOT)) {
+            return new ComparisonExpression(
+                    span(isToken),
+                    ComparisonOperator.NOT_EQUAL,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.GREATER)) {
+            consume(TokenType.THAN, "Expected 'than' after 'greater'");
+            if (match(TokenType.OR)) {
+                consume(TokenType.EQUAL, "Expected 'equal' after 'or'");
+                consume(TokenType.TO, "Expected 'to' after 'equal'");
+                return new ComparisonExpression(
+                        span(isToken),
+                        ComparisonOperator.GREATER_THAN_OR_EQUAL,
+                        left,
+                        parseExpression()
+                );
+            }
+            return new ComparisonExpression(
+                    span(isToken),
+                    ComparisonOperator.GREATER_THAN,
+                    left,
+                    parseExpression()
+            );
+        }
+        if (match(TokenType.LESS)) {
+            consume(TokenType.THAN, "Expected 'than' after 'less'");
+            if (match(TokenType.OR)) {
+                consume(TokenType.EQUAL, "Expected 'equal' after 'or'");
+                consume(TokenType.TO, "Expected 'to' after 'equal'");
+                return new ComparisonExpression(
+                        span(isToken),
+                        ComparisonOperator.LESS_THAN_OR_EQUAL,
+                        left,
+                        parseExpression()
+                );
+            }
+            return new ComparisonExpression(
+                    span(isToken),
+                    ComparisonOperator.LESS_THAN,
+                    left,
+                    parseExpression()
+            );
+        }
+        return new ComparisonExpression(
+                span(isToken),
+                ComparisonOperator.EQUAL,
+                left,
+                parseExpression()
+        );
     }
 
     private SendStatement parseSendStatement() {
