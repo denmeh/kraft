@@ -16,6 +16,7 @@ public final class Lexer {
             "permission", TokenType.PERMISSION,
             "trigger", TokenType.TRIGGER,
             "send", TokenType.SEND,
+            "set", TokenType.SET,
             "to", TokenType.TO,
             "player", TokenType.PLAYER
     );
@@ -111,6 +112,7 @@ public final class Lexer {
                 column = 1;
             }
             case '"' -> tokens.add(readString());
+            case '{' -> tokens.add(readVariable());
             case '+' -> tokens.add(token(TokenType.PLUS, "+", line, column - 1));
             case '-' -> tokens.add(token(TokenType.MINUS, "-", line, column - 1));
             case '*' -> tokens.add(token(TokenType.STAR, "*", line, column - 1));
@@ -153,6 +155,35 @@ public final class Lexer {
 
         advance();
         return token(TokenType.STRING, value.toString(), startLine, startColumn);
+    }
+
+    private Token readVariable() {
+        int startLine = line;
+        int startColumn = column - 1;
+        StringBuilder name = new StringBuilder();
+
+        while (!isAtEnd() && peek() != '}') {
+            char current = peek();
+            if (isVariablePart(current)) {
+                name.append(advance());
+            } else {
+                reporter.error("Invalid character in variable name", line, column);
+                advance();
+            }
+        }
+
+        if (isAtEnd()) {
+            reporter.error("Unterminated variable", startLine, startColumn);
+            return token(TokenType.VARIABLE, name.toString(), startLine, startColumn);
+        }
+
+        advance();
+
+        if (name.isEmpty()) {
+            reporter.error("Expected variable name", startLine, startColumn);
+        }
+
+        return token(TokenType.VARIABLE, name.toString(), startLine, startColumn);
     }
 
     private Token readCommandName() {
@@ -280,6 +311,10 @@ public final class Lexer {
 
     private static boolean isDigit(char c) {
         return c >= '0' && c <= '9';
+    }
+
+    private static boolean isVariablePart(char c) {
+        return isAlphaNumeric(c) || c == '_';
     }
 
     private static boolean isIdentifierPart(char c) {

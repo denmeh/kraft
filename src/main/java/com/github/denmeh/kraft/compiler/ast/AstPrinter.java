@@ -39,18 +39,19 @@ public final class AstPrinter {
     }
 
     private void printStatement(StringBuilder output, Statement statement, int depth) {
-        if (statement instanceof SendStatement send) {
-            appendLine(output, depth, "Send(" + printExpression(send.message()) + ", player)");
-            return;
+        switch (statement) {
+            case SendStatement send ->
+                    appendLine(output, depth, "Send(" + printExpression(send.message()) + ", player)");
+            case SetStatement set ->
+                    appendLine(output, depth, "Set({" + set.variableName() + "}, " + printExpression(set.value()) + ")");
         }
-
-        throw new IllegalArgumentException("Unsupported statement: " + statement.getClass().getSimpleName());
     }
 
     private String printExpression(Expression expression) {
         return switch (expression) {
             case NumberLiteralExpression number -> number.value();
             case TextLiteralExpression text -> "\"" + text.value() + "\"";
+            case VariableReferenceExpression variable -> "{" + variable.name() + "}";
             case BinaryExpression binary -> printBinary(binary);
         };
     }

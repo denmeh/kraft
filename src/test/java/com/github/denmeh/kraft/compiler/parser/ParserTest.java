@@ -7,7 +7,9 @@ import com.github.denmeh.kraft.compiler.ast.CommandDeclaration;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
+import com.github.denmeh.kraft.compiler.ast.SetStatement;
 import com.github.denmeh.kraft.compiler.ast.TextLiteralExpression;
+import com.github.denmeh.kraft.compiler.ast.VariableReferenceExpression;
 import com.github.denmeh.kraft.compiler.diagnostic.DiagnosticReporter;
 import com.github.denmeh.kraft.compiler.lexer.Lexer;
 import com.github.denmeh.kraft.compiler.lexer.Token;
@@ -116,5 +118,25 @@ class ParserTest {
 
         BinaryExpression multiplication = assertInstanceOf(BinaryExpression.class, addition.right());
         assertEquals(BinaryOperator.MULTIPLY, multiplication.operator());
+    }
+
+    @Test
+    void parsesSetStatementAndVariableReference() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.VARIABLES, reporter).tokenize();
+        KraftFile file = new Parser(tokens, reporter).parse();
+
+        assertFalse(reporter.hasErrors());
+
+        var statements = file.commands().getFirst().trigger().orElseThrow().statements();
+        assertEquals(2, statements.size());
+
+        SetStatement set = assertInstanceOf(SetStatement.class, statements.get(0));
+        assertEquals("_answer", set.variableName());
+        assertInstanceOf(BinaryExpression.class, set.value());
+
+        SendStatement send = assertInstanceOf(SendStatement.class, statements.get(1));
+        VariableReferenceExpression variable = assertInstanceOf(VariableReferenceExpression.class, send.message());
+        assertEquals("_answer", variable.name());
     }
 }

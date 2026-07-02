@@ -7,12 +7,16 @@ import com.github.denmeh.kraft.compiler.ast.Expression;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
+import com.github.denmeh.kraft.compiler.ast.SetStatement;
 import com.github.denmeh.kraft.compiler.ast.Statement;
 import com.github.denmeh.kraft.compiler.ast.TextLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.TriggerBlock;
+import com.github.denmeh.kraft.compiler.ast.VariableReferenceExpression;
 import com.github.denmeh.kraft.compiler.diagnostic.DiagnosticReporter;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -61,19 +65,29 @@ public final class SemanticAnalyzer {
             return;
         }
 
+        Map<String, KraftType> scope = new HashMap<>();
         for (Statement statement : trigger.statements()) {
-            validateStatement(statement, reporter);
+            validateStatement(statement, scope, reporter);
         }
     }
 
-    private void validateStatement(Statement statement, DiagnosticReporter reporter) {
-        if (statement instanceof SendStatement send) {
-            validateSend(send, reporter);
+    private void validateStatement(
+            Statement statement,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        switch (statement) {
+            case SendStatement send -> validateSend(send, scope, reporter);
+            case SetStatement set -> validateSet(set, scope, reporter);
         }
     }
 
-    private void validateSend(SendStatement send, DiagnosticReporter reporter) {
-        Optional<KraftType> messageType = analyzeExpression(send.message(), reporter);
+    private void validateSend(
+            SendStatement send,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        Optional<KraftType> messageType = analyzeExpression(send.message(), scope, reporter);
         if (messageType.isEmpty()) {
             return;
         }
@@ -88,17 +102,52 @@ public final class SemanticAnalyzer {
         }
     }
 
-    private Optional<KraftType> analyzeExpression(Expression expression, DiagnosticReporter reporter) {
+    private void validateSet(
+            SetStatement set,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        Optional<KraftType> valueType = analyzeExpression(set.value(), scope, reporter);
+        valueType.ifPresent(type -> scope.put(set.variableName(), type));
+    }
+
+    private Optional<KraftType> analyzeExpression(
+            Expression expression,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
         return switch (expression) {
             case NumberLiteralExpression ignored -> Optional.of(KraftType.NUMBER);
             case TextLiteralExpression ignored -> Optional.of(KraftType.TEXT);
-            case BinaryExpression binary -> analyzeBinary(binary, reporter);
+            case VariableReferenceExpression variable -> analyzeVariableReference(variable, scope, reporter);
+            case BinaryExpression binary -> analyzeBinary(binary, scope, reporter);
         };
     }
 
-    private Optional<KraftType> analyzeBinary(BinaryExpression binary, DiagnosticReporter reporter) {
-        Optional<KraftType> leftType = analyzeExpression(binary.left(), reporter);
-        Optional<KraftType> rightType = analyzeExpression(binary.right(), reporter);
+    private Optional<KraftType> analyzeVariableReference(
+            VariableReferenceExpression variable,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        KraftType type = scope.get(variable.name());
+        if (type == null) {
+            reporter.error(
+                    "Undefined variable '{" + variable.name() + "}'",
+                    variable.span().line(),
+                    variable.span().column()
+            );
+            return Optional.empty();
+        }
+        return Optional.of(type);
+    }
+
+    private Optional<KraftType> analyzeBinary(
+            BinaryExpression binary,
+            Map<String, KraftType> scope,
+            DiagnosticReporter reporter
+    ) {
+        Optional<KraftType> leftType = analyzeExpression(binary.left(), scope, reporter);
+        Optional<KraftType> rightType = analyzeExpression(binary.right(), scope, reporter);
 
         if (leftType.isEmpty() || rightType.isEmpty()) {
             return Optional.empty();

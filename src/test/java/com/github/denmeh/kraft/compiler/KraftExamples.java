@@ -26,6 +26,13 @@ public final class KraftExamples {
                     send "Result: " + 10 to player
             """;
 
+    public static final String VARIABLES = """
+            command /math:
+                trigger:
+                    set {_answer} to 5 + 5
+                    send {_answer} to player
+            """;
+
     private KraftExamples() {
     }
 }

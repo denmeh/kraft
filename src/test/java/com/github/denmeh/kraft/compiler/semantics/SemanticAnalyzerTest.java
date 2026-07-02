@@ -41,6 +41,37 @@ class SemanticAnalyzerTest {
     }
 
     @Test
+    void acceptsVariablesExample() {
+        DiagnosticReporter reporter = analyze(KraftExamples.VARIABLES);
+        assertFalse(reporter.hasErrors());
+    }
+
+    @Test
+    void reportsUndefinedVariable() {
+        DiagnosticReporter reporter = analyze("""
+                command /bad:
+                    trigger:
+                        send {_missing} to player
+                """);
+
+        assertTrue(reporter.hasErrors());
+        assertTrue(hasMessage(reporter, "Undefined variable '{_missing}'"));
+    }
+
+    @Test
+    void reportsVariableUsedBeforeSet() {
+        DiagnosticReporter reporter = analyze("""
+                command /bad:
+                    trigger:
+                        send {_answer} to player
+                        set {_answer} to 5
+                """);
+
+        assertTrue(reporter.hasErrors());
+        assertTrue(hasMessage(reporter, "Undefined variable '{_answer}'"));
+    }
+
+    @Test
     void reportsInvalidArithmeticOperands() {
         DiagnosticReporter reporter = analyze("""
                 command /bad:

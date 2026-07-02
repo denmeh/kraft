@@ -5,6 +5,7 @@ public enum TokenType {
     PERMISSION,
     TRIGGER,
     SEND,
+    SET,
     TO,
     PLAYER,
 
@@ -12,6 +13,7 @@ public enum TokenType {
     IDENTIFIER,
     STRING,
     NUMBER,
+    VARIABLE,
 
     PLUS,
     MINUS,

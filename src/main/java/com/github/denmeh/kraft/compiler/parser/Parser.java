@@ -7,10 +7,12 @@ import com.github.denmeh.kraft.compiler.ast.Expression;
 import com.github.denmeh.kraft.compiler.ast.KraftFile;
 import com.github.denmeh.kraft.compiler.ast.NumberLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.SendStatement;
+import com.github.denmeh.kraft.compiler.ast.SetStatement;
 import com.github.denmeh.kraft.compiler.ast.SourceSpan;
 import com.github.denmeh.kraft.compiler.ast.Statement;
 import com.github.denmeh.kraft.compiler.ast.TextLiteralExpression;
 import com.github.denmeh.kraft.compiler.ast.TriggerBlock;
+import com.github.denmeh.kraft.compiler.ast.VariableReferenceExpression;
 import com.github.denmeh.kraft.compiler.diagnostic.DiagnosticReporter;
 import com.github.denmeh.kraft.compiler.lexer.Token;
 import com.github.denmeh.kraft.compiler.lexer.TokenType;
@@ -64,7 +66,7 @@ public final class Parser {
                 permission = Optional.of(parsePermission());
             } else if (check(TokenType.TRIGGER)) {
                 trigger = Optional.of(parseTriggerBlock());
-            } else if (check(TokenType.SEND)) {
+            } else if (check(TokenType.SEND) || check(TokenType.SET)) {
                 misplacedStatements.add(parseStatement());
             } else {
                 Token token = peek();
@@ -101,7 +103,7 @@ public final class Parser {
         List<Statement> statements = new ArrayList<>();
 
         if (match(TokenType.INDENT)) {
-            while (check(TokenType.SEND)) {
+            while (check(TokenType.SEND) || check(TokenType.SET)) {
                 statements.add(parseStatement());
             }
         }
@@ -110,6 +112,20 @@ public final class Parser {
     }
 
     private Statement parseStatement() {
+        if (check(TokenType.SEND)) {
+            return parseSendStatement();
+        }
+        if (check(TokenType.SET)) {
+            return parseSetStatement();
+        }
+
+        Token token = peek();
+        reporter.error("Expected statement", token.line(), token.column());
+        advance();
+        return new SendStatement(span(token), new NumberLiteralExpression(span(token), "0"));
+    }
+
+    private SendStatement parseSendStatement() {
         Token sendToken = consume(TokenType.SEND, "Expected 'send'");
         Expression message = parseExpression();
         consume(TokenType.TO, "Expected 'to' after message");
@@ -120,6 +136,19 @@ public final class Parser {
         }
 
         return new SendStatement(span(sendToken), message);
+    }
+
+    private SetStatement parseSetStatement() {
+        Token setToken = consume(TokenType.SET, "Expected 'set'");
+        Token variableToken = consume(TokenType.VARIABLE, "Expected variable like {_x}");
+        consume(TokenType.TO, "Expected 'to' after variable");
+        Expression value = parseExpression();
+
+        if (check(TokenType.NEWLINE)) {
+            advance();
+        }
+
+        return new SetStatement(span(setToken), variableToken.lexeme(), value);
     }
 
     private Expression parseExpression() {
@@ -163,6 +192,11 @@ public final class Parser {
         if (match(TokenType.STRING)) {
             Token token = previous();
             return new TextLiteralExpression(span(token), token.lexeme());
+        }
+
+        if (match(TokenType.VARIABLE)) {
+            Token token = previous();
+            return new VariableReferenceExpression(span(token), token.lexeme());
         }
 
         Token token = peek();

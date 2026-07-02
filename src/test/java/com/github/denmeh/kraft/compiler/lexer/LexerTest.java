@@ -110,4 +110,18 @@ class LexerTest {
         assertEquals("5", tokens.get(10).lexeme());
         assertEquals("5", tokens.get(12).lexeme());
     }
+
+    @Test
+    void tokenizesVariableSyntax() {
+        DiagnosticReporter reporter = new DiagnosticReporter();
+        List<Token> tokens = new Lexer(KraftExamples.VARIABLES, reporter).tokenize();
+
+        assertFalse(reporter.hasErrors());
+        assertEquals(TokenType.SET, tokens.get(9).type());
+        assertEquals(TokenType.VARIABLE, tokens.get(10).type());
+        assertEquals("_answer", tokens.get(10).lexeme());
+        assertEquals(TokenType.TO, tokens.get(11).type());
+        assertEquals(TokenType.VARIABLE, tokens.get(17).type());
+        assertEquals("_answer", tokens.get(17).lexeme());
+    }
 }
